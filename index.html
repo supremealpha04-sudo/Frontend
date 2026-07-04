@@ -57,7 +57,6 @@
             -moz-osx-font-smoothing: grayscale;
         }
 
-        /* Glass morphism */
         .glass {
             background: rgba(15, 23, 42, 0.7);
             backdrop-filter: blur(20px) saturate(180%);
@@ -71,7 +70,6 @@
             border: 1px solid rgba(148, 163, 184, 0.1);
         }
 
-        /* Animated gradient border */
         .gradient-border {
             position: relative;
             background: rgba(15, 23, 42, 0.6);
@@ -91,12 +89,10 @@
             pointer-events: none;
         }
 
-        /* Glow effects */
         .glow-blue { box-shadow: 0 0 40px rgba(14, 165, 233, 0.08), 0 0 80px rgba(14, 165, 233, 0.04); }
         .glow-rose { box-shadow: 0 0 40px rgba(244, 63, 94, 0.08), 0 0 80px rgba(244, 63, 94, 0.04); }
         .glow-emerald { box-shadow: 0 0 40px rgba(16, 185, 129, 0.08), 0 0 80px rgba(16, 185, 129, 0.04); }
 
-        /* Animations */
         @keyframes fadeUp {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
@@ -142,34 +138,28 @@
         .delay-400 { animation-delay: 0.4s; opacity: 0; }
         .delay-500 { animation-delay: 0.5s; opacity: 0; }
 
-        /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.2); border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.3); }
 
-        /* Custom selection */
         ::selection { background: rgba(14, 165, 233, 0.3); color: #f0f9ff; }
 
-        /* Button hover lift */
         .btn-lift { transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
         .btn-lift:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
         .btn-lift:active { transform: translateY(0); }
 
-        /* Card hover */
         .card-hover { transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
         .card-hover:hover {
             transform: translateY(-4px);
             box-shadow: 0 20px 40px rgba(0,0,0,0.3), 0 0 0 1px rgba(148,163,184,0.08);
         }
 
-        /* Nav active indicator */
         .nav-active {
             background: linear-gradient(90deg, rgba(14, 165, 233, 0.1) 0%, transparent 100%);
             border-left: 2.5px solid #0ea5e9;
         }
 
-        /* Upload zone */
         .upload-zone {
             background: linear-gradient(135deg, rgba(15,23,42,0.8) 0%, rgba(26,34,52,0.6) 100%);
             border: 2px dashed rgba(148,163,184,0.15);
@@ -180,14 +170,6 @@
             background: linear-gradient(135deg, rgba(14,165,233,0.05) 0%, rgba(26,34,52,0.6) 100%);
         }
 
-        /* Progress ring */
-        .progress-ring-circle {
-            transition: stroke-dashoffset 0.5s ease;
-            transform: rotate(-90deg);
-            transform-origin: 50% 50%;
-        }
-
-        /* Status pills */
         .pill {
             display: inline-flex;
             align-items: center;
@@ -199,29 +181,17 @@
             letter-spacing: 0.01em;
         }
 
-        /* Image viewer */
         .image-viewer { background: #0a0f1a; border-radius: 12px; overflow: hidden; }
         .image-viewer img { display: block; width: 100%; height: auto; }
 
-        /* Loading skeleton */
-        .skeleton {
-            background: linear-gradient(90deg, rgba(148,163,184,0.08) 25%, rgba(148,163,184,0.15) 50%, rgba(148,163,184,0.08) 75%);
-            background-size: 200% 100%;
-            animation: shimmer 1.5s infinite;
-            border-radius: 8px;
-        }
-
-        /* Toast */
         .toast-enter { animation: slideRight 0.3s ease forwards; }
         .toast-exit { animation: fadeIn 0.2s ease reverse forwards; }
 
-        /* Modal overlay */
         .modal-overlay {
             background: rgba(7, 11, 20, 0.8);
             backdrop-filter: blur(8px);
         }
 
-        /* Scan animation overlay */
         .scan-overlay::after {
             content: '';
             position: absolute;
@@ -233,7 +203,6 @@
             animation: scan-line 2s linear infinite;
         }
 
-        /* Responsive sidebar */
         @media (max-width: 1024px) {
             .sidebar { transform: translateX(-100%); }
             .sidebar.open { transform: translateX(0); }
@@ -256,11 +225,18 @@
             module: null,
             cases: [],
             caseDetail: null,
-            stats: {},
+            stats: {
+                total: 0,
+                pending: 0,
+                urgent: 0,
+                reviewed: 0,
+                avgConf: 0,
+                breast: 0,
+                cervical: 0
+            },
             loading: false,
             sidebarOpen: false,
-            toastQueue: [],
-            dragOver: false,
+            apiError: null
         };
 
         // ═══════════════════════════════════════════════════════════════
@@ -270,29 +246,51 @@
         const $$ = s => document.querySelectorAll(s);
         const fmtDate = d => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
         const fmtNum = n => new Intl.NumberFormat('en-US').format(n);
-        const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
 
-        const riskColor = lvl => ({ high: 'text-rose-400', medium: 'text-amber-400', low: 'text-emerald-400' }[lvl] || 'text-slate-400');
-        const riskBg = lvl => ({ high: 'bg-rose-500/10 border-rose-500/20', medium: 'bg-amber-500/10 border-amber-500/20', low: 'bg-emerald-500/10 border-emerald-500/20' }[lvl] || 'bg-slate-500/10 border-slate-500/20');
-        const riskIcon = lvl => ({ high: 'fa-triangle-exclamation', medium: 'fa-circle-exclamation', low: 'fa-check-circle' }[lvl] || 'fa-minus-circle');
+        const riskColor = lvl => {
+            if (!lvl) return 'text-slate-400';
+            const map = { high: 'text-rose-400', medium: 'text-amber-400', low: 'text-emerald-400' };
+            return map[lvl.toLowerCase()] || 'text-slate-400';
+        };
+        const riskBg = lvl => {
+            if (!lvl) return 'bg-slate-500/10 border-slate-500/20';
+            const map = { high: 'bg-rose-500/10 border-rose-500/20', medium: 'bg-amber-500/10 border-amber-500/20', low: 'bg-emerald-500/10 border-emerald-500/20' };
+            return map[lvl.toLowerCase()] || 'bg-slate-500/10 border-slate-500/20';
+        };
+        const riskIcon = lvl => {
+            if (!lvl) return 'fa-minus-circle';
+            const map = { high: 'fa-triangle-exclamation', medium: 'fa-circle-exclamation', low: 'fa-check-circle' };
+            return map[lvl.toLowerCase()] || 'fa-minus-circle';
+        };
+
         const statusPill = st => {
+            if (!st) st = 'pending';
             const map = {
                 pending:   { cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20', icon: 'fa-clock' },
                 reviewed:  { cls: 'bg-medical-500/10 text-medical-400 border-medical-500/20', icon: 'fa-eye' },
                 approved:  { cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', icon: 'fa-check' },
                 rejected:  { cls: 'bg-rose-500/10 text-rose-400 border-rose-500/20', icon: 'fa-xmark' },
             };
-            const m = map[st] || map.pending;
+            const m = map[st.toLowerCase()] || map.pending;
             return `<span class="pill ${m.cls} border"><i class="fas ${m.icon} text-[10px]"></i>${st}</span>`;
         };
 
-        // Toast system
         const toast = (msg, type = 'info') => {
-            const colors = { info: 'border-medical-500/30 bg-medical-500/10 text-medical-300', success: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300', warning: 'border-amber-500/30 bg-amber-500/10 text-amber-300', error: 'border-rose-500/30 bg-rose-500/10 text-rose-300' };
-            const icons = { info: 'fa-info-circle', success: 'fa-check-circle', warning: 'fa-exclamation-circle', error: 'fa-circle-xmark' };
+            const colors = { 
+                info: 'border-medical-500/30 bg-medical-500/10 text-medical-300', 
+                success: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300', 
+                warning: 'border-amber-500/30 bg-amber-500/10 text-amber-300', 
+                error: 'border-rose-500/30 bg-rose-500/10 text-rose-300' 
+            };
+            const icons = { 
+                info: 'fa-info-circle', 
+                success: 'fa-check-circle', 
+                warning: 'fa-exclamation-circle', 
+                error: 'fa-circle-xmark' 
+            };
             const el = document.createElement('div');
-            el.className = `fixed top-5 right-5 z-[100] px-5 py-3.5 rounded-xl border toast-enter glass-strong flex items-center gap-3 min-w-[320px] max-w-md ${colors[type]}`;
-            el.innerHTML = `<i class="fas ${icons[type]}"></i><span class="text-sm font-medium">${msg}</span>`;
+            el.className = `fixed top-5 right-5 z-[100] px-5 py-3.5 rounded-xl border toast-enter glass-strong flex items-center gap-3 min-w-[320px] max-w-md ${colors[type] || colors.info}`;
+            el.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i><span class="text-sm font-medium">${msg}</span>`;
             document.body.appendChild(el);
             setTimeout(() => { el.classList.add('toast-exit'); setTimeout(() => el.remove(), 200); }, 4000);
         };
@@ -304,16 +302,36 @@
         };
 
         // ═══════════════════════════════════════════════════════════════
-        // API
+        // API with better error handling
         // ═══════════════════════════════════════════════════════════════
         const api = {
             async req(method, path, body = null, isForm = false) {
-                const opts = { method };
-                if (!isForm && body) { opts.headers = { 'Content-Type': 'application/json' }; opts.body = JSON.stringify(body); }
-                if (isForm && body) opts.body = body;
-                const res = await fetch(`${API_BASE}${path}`, opts);
-                if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || `HTTP ${res.status}`); }
-                return res.json();
+                try {
+                    const opts = { method, headers: {} };
+                    if (!isForm && body) {
+                        opts.headers['Content-Type'] = 'application/json';
+                        opts.body = JSON.stringify(body);
+                    }
+                    if (isForm && body) {
+                        opts.body = body;
+                    }
+                    
+                    console.log(`[API] ${method} ${path}`, body);
+                    const res = await fetch(`${API_BASE}${path}`, opts);
+                    
+                    if (!res.ok) {
+                        const text = await res.text();
+                        console.error(`[API Error] ${res.status}: ${text}`);
+                        throw new Error(`HTTP ${res.status}: ${text.substring(0, 100)}`);
+                    }
+                    
+                    const data = await res.json();
+                    console.log(`[API Response] ${path}`, data);
+                    return data;
+                } catch (e) {
+                    console.error(`[API Exception] ${method} ${path}`, e);
+                    throw e;
+                }
             },
             get: p => api.req('GET', p),
             post: (p, d) => api.req('POST', p, d),
@@ -333,36 +351,148 @@
         };
 
         // ═══════════════════════════════════════════════════════════════
-        // DATA LOADING
+        // DATA LOADING - FIXED to handle actual API responses
         // ═══════════════════════════════════════════════════════════════
         const loadStats = async () => {
             try {
-                const [b, c] = await Promise.all([api.get('/api/breast/dashboard').catch(() => ({})), api.get('/api/cervical/dashboard').catch(() => ({}))]);
+                console.log('Loading stats...');
+                const [b, c] = await Promise.all([
+                    api.get('/api/breast/dashboard').catch(e => {
+                        console.warn('Breast dashboard error:', e);
+                        return {};
+                    }),
+                    api.get('/api/cervical/dashboard').catch(e => {
+                        console.warn('Cervical dashboard error:', e);
+                        return {};
+                    })
+                ]);
+                
+                console.log('Breast stats:', b);
+                console.log('Cervical stats:', c);
+                
+                // Handle different response structures
+                const breastTotal = b.total_cases || b.total || b.cases?.length || 0;
+                const cervicalTotal = c.total_cases || c.total || c.cases?.length || 0;
+                const breastPending = b.pending_review || b.pending || 0;
+                const cervicalPending = c.pending_review || c.pending || 0;
+                const breastUrgent = b.urgent_review || b.urgent || 0;
+                const cervicalUrgent = c.urgent_review || c.urgent || 0;
+                const breastReviewed = b.reviewed || 0;
+                const cervicalReviewed = c.reviewed || 0;
+                
                 state.stats = {
-                    total: (b.total_cases || 0) + (c.total_cases || 0),
-                    pending: (b.pending_review || 0) + (c.pending_review || 0),
-                    urgent: (b.urgent_review || 0) + (c.urgent_review || 0),
-                    reviewed: (b.reviewed || 0) + (c.reviewed || 0),
-                    avgConf: (((b.average_confidence || 0) + (c.average_confidence || 0)) / 2 * 100).toFixed(1),
-                    breast: b.total_cases || 0,
-                    cervical: c.total_cases || 0,
+                    total: breastTotal + cervicalTotal,
+                    pending: breastPending + cervicalPending,
+                    urgent: breastUrgent + cervicalUrgent,
+                    reviewed: breastReviewed + cervicalReviewed,
+                    avgConf: ((b.average_confidence || 0) + (c.average_confidence || 0)) / 2 * 100 || 0,
+                    breast: breastTotal,
+                    cervical: cervicalTotal,
                 };
-            } catch (e) { console.error(e); }
+                
+                console.log('Final stats:', state.stats);
+            } catch (e) {
+                console.error('Failed to load stats:', e);
+                toast('Failed to load dashboard data', 'error');
+            }
         };
 
         const loadCases = async () => {
             try {
-                const [b, c] = await Promise.all([api.get('/api/breast/cases?limit=100').catch(() => ({ cases: [] })), api.get('/api/cervical/cases?limit=100').catch(() => ({ cases: [] }))]);
-                state.cases = [...(b.cases || []), ...(c.cases || [])].sort((a, b) => new Date(b.upload_date) - new Date(a.upload_date));
-            } catch (e) { console.error(e); }
+                console.log('Loading cases...');
+                const [b, c] = await Promise.all([
+                    api.get('/api/breast/cases?limit=100').catch(e => {
+                        console.warn('Breast cases error:', e);
+                        return { cases: [] };
+                    }),
+                    api.get('/api/cervical/cases?limit=100').catch(e => {
+                        console.warn('Cervical cases error:', e);
+                        return { cases: [] };
+                    })
+                ]);
+                
+                const breastCases = b.cases || b || [];
+                const cervicalCases = c.cases || c || [];
+                
+                // Normalize case data
+                const normalizeCase = (caseData, module) => ({
+                    case_id: caseData.case_id || caseData.id || `case_${Date.now()}`,
+                    patient_id: caseData.patient_id || caseData.patientId || 'Unknown',
+                    module: module,
+                    prediction: caseData.prediction || caseData.result || 'Pending',
+                    confidence: caseData.confidence || caseData.confidence_score || 0,
+                    status: caseData.status || 'pending',
+                    risk_level: caseData.risk_level || caseData.risk || 'low',
+                    risk_score: caseData.risk_score || caseData.riskScore || 0,
+                    upload_date: caseData.upload_date || caseData.created_at || new Date().toISOString(),
+                    review_required: caseData.review_required || false,
+                    file_type: caseData.file_type || 'image',
+                    model_version: caseData.model_version || 'v1',
+                    processing_time_ms: caseData.processing_time_ms || 0,
+                    images: caseData.images || {},
+                    findings: caseData.findings || [],
+                    reviewer_id: caseData.reviewer_id || null,
+                    review_notes: caseData.review_notes || null,
+                    review_date: caseData.review_date || null,
+                    total_cells: caseData.total_cells || 0,
+                    suspicious_cells: caseData.suspicious_cells || 0,
+                    disclaimer: caseData.disclaimer || 'AI results assist clinicians and require professional interpretation.'
+                });
+                
+                const allCases = [
+                    ...(Array.isArray(breastCases) ? breastCases : []).map(c => normalizeCase(c, 'breast')),
+                    ...(Array.isArray(cervicalCases) ? cervicalCases : []).map(c => normalizeCase(c, 'cervical'))
+                ];
+                
+                state.cases = allCases.sort((a, b) => new Date(b.upload_date) - new Date(a.upload_date));
+                console.log(`Loaded ${state.cases.length} cases`);
+                
+            } catch (e) {
+                console.error('Failed to load cases:', e);
+                toast('Failed to load cases', 'error');
+            }
         };
 
         const loadCase = async id => {
             try {
+                console.log(`Loading case ${id}...`);
                 let d = await api.get(`/api/breast/cases/${id}`).catch(() => null);
                 if (!d) d = await api.get(`/api/cervical/cases/${id}`).catch(() => null);
-                state.caseDetail = d;
-            } catch (e) { console.error(e); }
+                
+                if (d) {
+                    // Normalize the case data
+                    const module = d.module || (d.id?.includes('breast') ? 'breast' : 'cervical');
+                    state.caseDetail = {
+                        case_id: d.case_id || d.id || id,
+                        patient_id: d.patient_id || d.patientId || 'Unknown',
+                        module: module,
+                        prediction: d.prediction || d.result || 'Pending',
+                        confidence: d.confidence || d.confidence_score || 0,
+                        status: d.status || 'pending',
+                        risk_level: d.risk_level || d.risk || 'low',
+                        risk_score: d.risk_score || d.riskScore || 0,
+                        upload_date: d.upload_date || d.created_at || new Date().toISOString(),
+                        review_required: d.review_required || false,
+                        file_type: d.file_type || 'image',
+                        model_version: d.model_version || 'v1',
+                        processing_time_ms: d.processing_time_ms || 0,
+                        images: d.images || {},
+                        findings: d.findings || [],
+                        reviewer_id: d.reviewer_id || null,
+                        review_notes: d.review_notes || null,
+                        review_date: d.review_date || null,
+                        total_cells: d.total_cells || 0,
+                        suspicious_cells: d.suspicious_cells || 0,
+                        disclaimer: d.disclaimer || 'AI results assist clinicians and require professional interpretation.'
+                    };
+                    console.log('Case detail loaded:', state.caseDetail);
+                } else {
+                    toast('Case not found', 'error');
+                }
+            } catch (e) {
+                console.error('Failed to load case:', e);
+                toast('Failed to load case details', 'error');
+            }
         };
 
         // ═══════════════════════════════════════════════════════════════
@@ -491,7 +621,7 @@
                     ${StatCard({ icon: 'fa-microscope', iconBg: 'bg-gradient-to-br from-medical-500 to-medical-700', label: 'Total Cases', value: fmtNum(state.stats.total || 0), sub: 'All time analyses', delay: 'delay-100' })}
                     ${StatCard({ icon: 'fa-clock', iconBg: 'bg-gradient-to-br from-amber-500 to-amber-700', label: 'Pending', value: fmtNum(state.stats.pending || 0), sub: 'Awaiting review', delay: 'delay-200' })}
                     ${StatCard({ icon: 'fa-triangle-exclamation', iconBg: 'bg-gradient-to-br from-rose-500 to-rose-700', label: 'Urgent', value: fmtNum(state.stats.urgent || 0), sub: 'High priority', delay: 'delay-300', glow: 'glow-rose' })}
-                    ${StatCard({ icon: 'fa-chart-line', iconBg: 'bg-gradient-to-br from-emerald-500 to-emerald-700', label: 'Confidence', value: `${state.stats.avgConf || 0}%`, sub: 'Average accuracy', delay: 'delay-400' })}
+                    ${StatCard({ icon: 'fa-chart-line', iconBg: 'bg-gradient-to-br from-emerald-500 to-emerald-700', label: 'Confidence', value: `${Number(state.stats.avgConf || 0).toFixed(1)}%`, sub: 'Average accuracy', delay: 'delay-400' })}
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -507,7 +637,7 @@
                             <button onclick="go('cases')" class="text-xs font-medium text-medical-400 hover:text-medical-300 transition-colors">View all</button>
                         </div>
                         <div class="divide-y divide-slate-700/10">
-                            ${state.cases.slice(0, 6).map(c => `
+                            ${state.cases.length > 0 ? state.cases.slice(0, 6).map(c => `
                                 <div onclick="go('report',{caseId:'${c.case_id}'})" class="p-4 flex items-center gap-3 hover:bg-slate-800/30 cursor-pointer transition-colors group">
                                     <div class="w-9 h-9 rounded-lg ${c.module === 'breast' ? 'bg-rose-500/10' : 'bg-violet-500/10'} flex items-center justify-center flex-shrink-0">
                                         <i class="fas ${c.module === 'breast' ? 'fa-ribbon text-rose-400' : 'fa-microscope text-violet-400'} text-xs"></i>
@@ -521,7 +651,7 @@
                                         <p class="text-[11px] text-slate-600 mt-1">${fmtDate(c.upload_date)}</p>
                                     </div>
                                 </div>
-                            `).join('') || '<p class="text-slate-500 text-sm text-center py-12">No activity yet</p>'}
+                            `).join('') : '<p class="text-slate-500 text-sm text-center py-12">No cases found. Upload a scan to get started.</p>'}
                         </div>
                     </div>
                 </div>
@@ -597,7 +727,12 @@
 
         const ReportView = () => {
             const c = state.caseDetail;
-            if (!c) return `<div class="flex items-center justify-center h-96"><div class="w-10 h-10 border-2 border-medical-500/30 border-t-medical-400 rounded-full animate-spin"></div></div>`;
+            if (!c) {
+                return `<div class="flex flex-col items-center justify-center h-96 text-center">
+                    <div class="w-16 h-16 border-3 border-medical-500/30 border-t-medical-400 rounded-full animate-spin mb-4"></div>
+                    <p class="text-slate-400">Loading case details...</p>
+                </div>`;
+            }
             const isBreast = c.module === 'breast';
             const riskPct = Math.round((c.risk_score || 0) * 100);
             const confPct = Math.round((c.confidence || 0) * 100);
@@ -627,7 +762,7 @@
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="lg:col-span-2 space-y-6">
-                        ${c.images ? `
+                        ${c.images && (c.images.original || c.images.preprocessed || c.images.heatmap || c.images.annotated) ? `
                         <div class="glass rounded-2xl p-6 border border-slate-700/20">
                             <h3 class="font-semibold text-white mb-4 flex items-center gap-2"><i class="fas fa-images text-slate-500 text-sm"></i> Scan Analysis</h3>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -648,11 +783,11 @@
                                     </div>
                                     <div class="flex-1 min-w-0">
                                         <div class="flex items-center justify-between gap-2">
-                                            <h4 class="font-medium text-white">${f.type}</h4>
-                                            <span class="text-xs text-slate-400 font-mono">${(f.confidence * 100).toFixed(1)}%</span>
+                                            <h4 class="font-medium text-white">${f.type || f.findings_type || 'Finding'}</h4>
+                                            <span class="text-xs text-slate-400 font-mono">${((f.confidence || f.confidence_score || 0) * 100).toFixed(1)}%</span>
                                         </div>
                                         ${f.location ? `<p class="text-sm text-slate-400 mt-1"><i class="fas fa-location-dot text-slate-600 mr-1 text-xs"></i>${f.location}</p>` : ''}
-                                        ${f.cell_id ? `<p class="text-xs text-slate-600 mt-1 font-mono">Cell #${f.cell_id} · Abnormality: ${(f.abnormality_score * 100).toFixed(1)}%</p>` : ''}
+                                        ${f.cell_id ? `<p class="text-xs text-slate-600 mt-1 font-mono">Cell #${f.cell_id} · Abnormality: ${((f.abnormality_score || 0) * 100).toFixed(1)}%</p>` : ''}
                                     </div>
                                 </div>
                             `).join('')}</div>` : '<p class="text-slate-500 text-sm text-center py-8">No specific findings detected</p>'}
@@ -664,8 +799,8 @@
                             <div class="inline-flex items-center justify-center w-24 h-24 rounded-full ${riskBg(c.risk_level)} mb-4">
                                 <i class="fas ${riskIcon(c.risk_level)} ${riskColor(c.risk_level)} text-3xl"></i>
                             </div>
-                            <h4 class="text-xl font-bold text-white">${c.prediction}</h4>
-                            <p class="text-sm text-slate-500 mt-1">${c.model_version}</p>
+                            <h4 class="text-xl font-bold text-white">${c.prediction || 'Pending'}</h4>
+                            <p class="text-sm text-slate-500 mt-1">${c.model_version || 'v1'}</p>
 
                             <div class="space-y-4 mt-6">
                                 <div>
@@ -694,7 +829,7 @@
                             <div class="space-y-3 text-sm">
                                 <div class="flex justify-between py-2 border-b border-slate-700/20">
                                     <span class="text-slate-400">Processing</span>
-                                    <span class="text-white font-mono">${c.processing_time_ms}ms</span>
+                                    <span class="text-white font-mono">${c.processing_time_ms || 0}ms</span>
                                 </div>
                                 ${c.total_cells !== undefined ? `
                                 <div class="flex justify-between py-2 border-b border-slate-700/20">
@@ -712,7 +847,7 @@
                                 </div>
                                 <div class="flex justify-between py-2">
                                     <span class="text-slate-400">Format</span>
-                                    <span class="text-white font-mono uppercase text-xs">${c.file_type}</span>
+                                    <span class="text-white font-mono uppercase text-xs">${c.file_type || 'image'}</span>
                                 </div>
                             </div>
                         </div>
@@ -776,6 +911,7 @@
                 </div>
 
                 <div class="glass rounded-2xl border border-slate-700/20 overflow-hidden">
+                    ${state.cases.length > 0 ? `
                     <div class="overflow-x-auto">
                         <table class="w-full text-left">
                             <thead>
@@ -804,9 +940,9 @@
                                         <td class="px-6 py-4">
                                             <div class="flex items-center gap-2.5">
                                                 <div class="w-14 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                                                    <div class="h-full bg-medical-500 rounded-full" style="width:${(c.confidence * 100).toFixed(0)}%"></div>
+                                                    <div class="h-full bg-medical-500 rounded-full" style="width:${Math.min((c.confidence || 0) * 100, 100)}%"></div>
                                                 </div>
-                                                <span class="text-xs text-slate-400 font-mono">${(c.confidence * 100).toFixed(0)}%</span>
+                                                <span class="text-xs text-slate-400 font-mono">${Math.min((c.confidence || 0) * 100, 100).toFixed(0)}%</span>
                                             </div>
                                         </td>
                                         <td class="px-6 py-4">${statusPill(c.status)}</td>
@@ -817,10 +953,17 @@
                                             </button>
                                         </td>
                                     </tr>
-                                `).join('') || '<tr><td colspan="8" class="text-center py-16 text-slate-500 text-sm">No cases found</td></tr>'}
+                                `).join('')}
                             </tbody>
                         </table>
                     </div>
+                    ` : `
+                    <div class="text-center py-16">
+                        <i class="fas fa-folder-open text-4xl text-slate-700 mb-4"></i>
+                        <p class="text-slate-500 text-sm">No cases found</p>
+                        <p class="text-slate-600 text-xs mt-1">Upload a scan to get started</p>
+                    </div>
+                    `}
                 </div>
             </div>
         `;
@@ -838,6 +981,7 @@
                     <div class="p-5 border-b border-slate-700/20">
                         <h3 class="font-semibold text-white">Cases Requiring Review</h3>
                     </div>
+                    ${state.cases.filter(c => c.status === 'pending' && c.review_required).length > 0 ? `
                     <div class="divide-y divide-slate-700/10">
                         ${state.cases.filter(c => c.status === 'pending' && c.review_required).map(c => `
                             <div onclick="go('report',{caseId:'${c.case_id}'})" class="p-5 flex items-center gap-4 hover:bg-slate-800/30 cursor-pointer transition-colors">
@@ -849,15 +993,22 @@
                                         <h4 class="font-semibold text-white">${c.patient_id}</h4>
                                         <span class="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 text-[10px] font-bold border border-rose-500/20">URGENT</span>
                                     </div>
-                                    <p class="text-sm text-slate-400">${c.prediction || 'Pending'} · ${(c.confidence * 100).toFixed(1)}% confidence</p>
+                                    <p class="text-sm text-slate-400">${c.prediction || 'Pending'} · ${((c.confidence || 0) * 100).toFixed(1)}% confidence</p>
                                 </div>
                                 <div class="text-right flex-shrink-0">
                                     <p class="text-xs text-slate-500">${fmtDate(c.upload_date)}</p>
                                     <button class="mt-2 px-4 py-1.5 rounded-lg bg-medical-500 text-white text-xs font-semibold hover:bg-medical-600 transition-colors">Review</button>
                                 </div>
                             </div>
-                        `).join('') || '<div class="text-center py-16 text-slate-500 text-sm">No cases pending review</div>'}
+                        `).join('')}
                     </div>
+                    ` : `
+                    <div class="text-center py-16">
+                        <i class="fas fa-check-circle text-4xl text-emerald-500/30 mb-4"></i>
+                        <p class="text-slate-500 text-sm">No cases pending review</p>
+                        <p class="text-slate-600 text-xs mt-1">All caught up!</p>
+                    </div>
+                    `}
                 </div>
             </div>
         `;
@@ -971,8 +1122,11 @@
                 toast('Analysis complete!', 'success');
                 state.caseDetail = r;
                 go('report');
-                loadStats(); loadCases();
-            } catch (e) { toast(e.message, 'error'); }
+                await Promise.all([loadStats(), loadCases()]);
+            } catch (e) {
+                console.error('Analysis error:', e);
+                toast(e.message || 'Analysis failed', 'error');
+            }
             finally { setLoading(false); }
         };
 
@@ -982,13 +1136,14 @@
                 const ep = state.caseDetail.module === 'breast' ? `/api/breast/cases/${id}/review` : `/api/cervical/cases/${id}/review`;
                 await api.post(ep, { status: st, notes, reviewer_id: 'dr_smith' });
                 toast(`Case ${st}`, 'success');
-                loadCase(id); loadCases();
-            } catch (e) { toast(e.message, 'error'); }
+                await Promise.all([loadCase(id), loadCases(), loadStats()]);
+            } catch (e) {
+                console.error('Review error:', e);
+                toast(e.message || 'Review failed', 'error');
+            }
         };
 
         const filterCases = () => {
-            const mod = $('#f-module').value, st = $('#f-status').value;
-            // Client-side filter for demo; in production use API params
             loadCases();
         };
 
@@ -1016,8 +1171,8 @@
                                         <div class="absolute inset-0 border-2 border-medical-500 border-t-transparent rounded-full animate-spin"></div>
                                     </div>
                                     <div class="text-center">
-                                        <p class="text-white font-semibold">Analyzing scan...</p>
-                                        <p class="text-sm text-slate-500 mt-1">AI processing in progress</p>
+                                        <p class="text-white font-semibold">Processing...</p>
+                                        <p class="text-sm text-slate-500 mt-1">Please wait</p>
                                     </div>
                                 </div>
                             </div>
@@ -1045,9 +1200,35 @@
         // INIT
         // ═══════════════════════════════════════════════════════════════
         const init = async () => {
-            await Promise.all([loadStats(), loadCases()]);
+            console.log('Initializing app...');
+            console.log('API Base:', API_BASE);
+            
+            // Show loading state
+            setLoading(true);
+            
+            try {
+                await Promise.all([loadStats(), loadCases()]);
+                console.log('Data loaded successfully');
+            } catch (e) {
+                console.error('Init error:', e);
+                toast('Failed to load data from API', 'error');
+            }
+            
+            setLoading(false);
             render();
         };
+
+        // Make functions globally accessible
+        window.go = go;
+        window.handleFile = handleFile;
+        window.clearFile = clearFile;
+        window.analyze = analyze;
+        window.review = review;
+        window.filterCases = filterCases;
+        window.toggleSidebar = toggleSidebar;
+        window.loadStats = loadStats;
+        window.loadCases = loadCases;
+        window.loadCase = loadCase;
 
         document.addEventListener('DOMContentLoaded', init);
     </script>
